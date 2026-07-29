@@ -1,4 +1,5 @@
-# NIH Chest X-ray Pipeline: User Commands Cheat-Sheet
+# SmartCXR Pipeline: User Commands Cheat-Sheet
+### **Scalable Multi-Architecture AI for Radiological Thoracic Chest X-Ray Analysis**
 
 Use this quick-reference file to easily copy and paste the commands needed to train, fine-tune, test, and run predictions for any of the supported architectures.
 

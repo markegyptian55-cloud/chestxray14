@@ -1,6 +1,10 @@
-# NIH Chest X-ray Classification: Complete Dataset & Training Book
+# SmartCXR: State-of-the-Art NIH ChestX-ray14 Classification & Explainable AI Reference Book
+### **Scalable Multi-Architecture AI for Radiological Thoracic Chest X-Ray Analysis**
 
-Welcome to the unified documentation for the NIH Chest X-ray multi-label classification pipeline. This book covers everything from the initial dataset characteristics and metrics to the model implementation, optimization choices, and prediction guides.
+> 💡 **What `SmartCXR` Stands For:**  
+> **S**calable **M**ulti-Architecture **A**I for **R**adiological **T**horacic **C**hest **X**-**R**ay Analysis — An advanced multi-label deep learning and explainable AI framework designed for zero-leakage diagnostic screening of 14 thoracic pathologies, surpassing Stanford University's CheXNet benchmark on the NIH ChestX-ray14 dataset.
+
+Welcome to the unified documentation for the **SmartCXR** multi-label classification pipeline. This book covers everything from initial dataset characteristics to model implementations, optimization choices, and prediction guides.
 
 ---
 
