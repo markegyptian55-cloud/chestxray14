@@ -105,7 +105,7 @@ def set_backbone_frozen(model, model_name, frozen=True):
             param.requires_grad = not frozen
         for param in model.fc.parameters():
             param.requires_grad = True
-    elif model_name == "efficientnet_b4":
+    elif model_name in ["efficientnet_b4", "efficientnet_b7"]:
         # For EfficientNet, features is the backbone, classifier is the head
         backbone = model.features
         for param in backbone.parameters():
@@ -116,15 +116,21 @@ def set_backbone_frozen(model, model_name, frozen=True):
             param.requires_grad = not frozen
         for param in model.head.parameters():
             param.requires_grad = True
+    elif model_name == "convnext_large":
+        # For ConvNeXt-Large, freeze everything and unfreeze the classifier
+        for param in model.parameters():
+            param.requires_grad = not frozen
+        for param in model.classifier.parameters():
+            param.requires_grad = True
     else:
         raise ValueError(f"Backbone freezing not configured for model architecture: {model_name}")
 
 def main():
     parser = argparse.ArgumentParser(description="Train NIH Chest X-ray Multi-label Classification Model")
-    parser.add_argument("--csv_path", type=str, default=r"D:\project\DEEP LEARN PROJECT\NIH Chest X-rays\Dataset\Data_Entry_2017.csv", help="Path to Data_Entry_2017.csv")
-    parser.add_argument("--img_dir", type=str, default=r"D:\project\DEEP LEARN PROJECT\NIH Chest X-rays\Dataset\images", help="Path to images directory")
-    parser.add_argument("--train_val_path", type=str, default=r"D:\project\DEEP LEARN PROJECT\NIH Chest X-rays\Dataset\train_val_list.txt", help="Path to train_val_list.txt")
-    parser.add_argument("--model_name", type=str, default="densenet121", choices=["densenet121", "resnet50", "resnet18", "densenet169", "chexnet", "efficientnet_b4", "swin_t"], help="Model architecture")
+    parser.add_argument("--csv_path", type=str, default=r"D:\project\DEEP LEARN PROJECT\NIH Chest X-rays\chestxray14\Data_Entry_2017.csv", help="Path to Data_Entry_2017.csv")
+    parser.add_argument("--img_dir", type=str, default=r"D:\project\DEEP LEARN PROJECT\NIH Chest X-rays\chestxray14\images", help="Path to images directory")
+    parser.add_argument("--train_val_path", type=str, default=r"D:\project\DEEP LEARN PROJECT\NIH Chest X-rays\chestxray14\train_val_list.txt", help="Path to train_val_list.txt")
+    parser.add_argument("--model_name", type=str, default="densenet121", choices=["densenet121", "resnet50", "resnet18", "densenet169", "chexnet", "efficientnet_b4", "efficientnet_b7", "swin_t", "convnext_large"], help="Model architecture")
     parser.add_argument("--epochs", type=int, default=15, help="Number of training epochs")
     parser.add_argument("--batch_size", type=int, default=32, help="Batch size")
     parser.add_argument("--lr", type=float, default=1e-4, help="Learning rate")
@@ -133,18 +139,26 @@ def main():
     parser.add_argument("--num_workers", type=int, default=4, help="Number of workers for DataLoader")
     parser.add_argument("--run_name", type=str, default=None, help="Subfolder name for this training run to prevent overwriting (default: model_name + timestamp)")
     
-    # Advanced AUC Boosting options
-    parser.add_argument("--damp_weights", action="store_true", help="Apply square root damping to class weights to balance precision/recall and stabilize training")
-    parser.add_argument("--freeze_epochs", type=int, default=0, help="Number of initial epochs to freeze backbone (train only classifier head)")
-    parser.add_argument("--augment_brightness_contrast", action="store_true", help="Apply random brightness and contrast data augmentation")
-    parser.add_argument("--use_amp", action="store_true", help="Use Automatic Mixed Precision (AMP) for faster training and reduced memory usage")
+    # Advanced AUC Boosting options (default to True for peak performance)
+    parser.add_argument("--damp_weights", action="store_true", default=True, help="Apply square root damping to class weights to balance precision/recall and stabilize training")
+    parser.add_argument("--freeze_epochs", type=int, default=1, help="Number of initial epochs to freeze backbone (train only classifier head)")
+    parser.add_argument("--augment_brightness_contrast", action="store_true", default=True, help="Apply random brightness and contrast data augmentation")
+    parser.add_argument("--use_amp", action="store_true", default=True, help="Use Automatic Mixed Precision (AMP) for faster training and reduced memory usage")
     parser.add_argument("--resume", action="store_true", help="Resume training from the last saved checkpoint in the run directory")
     args = parser.parse_args()
     
     # 1. Setup run-specific checkpoint directory to organize results and prevent overwriting
     if args.run_name is None:
-        timestamp = time.strftime("run_%Y%m%d_%H%M%S")
-        args.run_name = f"{args.model_name}_{timestamp}"
+        model_runs = {
+            "swin_t": "swin_run",
+            "efficientnet_b4": "effnet_run",
+            "efficientnet_b7": "effnet_b7_run",
+            "convnext_large": "convnext_l_run",
+            "resnet50": "resnet50_run",
+            "chexnet": "chexnet_run",
+            "densenet121": "densenet121_best_accuracy_run"
+        }
+        args.run_name = model_runs.get(args.model_name, f"{args.model_name}_run")
     
     run_checkpoint_dir = os.path.join(args.checkpoint_dir, args.run_name)
     os.makedirs(run_checkpoint_dir, exist_ok=True)

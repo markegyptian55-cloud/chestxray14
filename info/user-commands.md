@@ -174,13 +174,29 @@ python src/visualize-info/visualize_model.py --model_name chexnet --checkpoint_p
 
 ### Future Models (run after training)
 ```bash
-# EfficientNet-B4
-python src/visualize-info/visualize_model.py --model_name efficientnet_b4 --checkpoint_path checkpoints/effnet_run/best_model_auc.pth
+# ConvNeXt-Large
+python src/visualize-info/visualize_model.py --model_name convnext_large --checkpoint_path checkpoints/convnext_l_run/best_model_auc.pth
 
 # Swin-T
 python src/visualize-info/visualize_model.py --model_name swin_t --checkpoint_path checkpoints/swin_run/best_model_auc.pth
-
-# ResNet-50
-python src/visualize-info/visualize_model.py --model_name resnet50 --checkpoint_path checkpoints/resnet50_run/best_model_auc.pth
 ```
+
+---
+
+## 👑 Section 4: 4-Model Soft-Voting Ensemble + TTA
+
+Runs weighted soft-voting across ConvNeXt-Large (35%) + CheXNet (30%) + DenseNet-121 (17.5%) + Swin-T (17.5%):
+
+### 1. Run 4-Model Ensemble Test Evaluation:
+```bash
+python src/test-4-model.py
+```
+*Saves output to: `info/ensemble-4model-test-output/evaluation_report_ensemble.txt`*
+
+### 2. Generate Ensemble Visualizations & Grad-CAM Heatmap Cards:
+```bash
+python src/visualize-info/visualize_ensemble.py
+```
+*Saves all 10 charts + Grad-CAM cards to: `info/ensemble-4model-test-output/`*
+
 

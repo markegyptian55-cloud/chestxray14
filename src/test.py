@@ -39,16 +39,34 @@ def evaluate_test_set(model, test_loader, device):
 
 def main():
     parser = argparse.ArgumentParser(description="Evaluate NIH Chest X-ray Classification Model")
-    parser.add_argument("--csv_path", type=str, default=r"D:\project\DEEP LEARN PROJECT\NIH Chest X-rays\Dataset\Data_Entry_2017.csv", help="Path to Data_Entry_2017.csv")
-    parser.add_argument("--img_dir", type=str, default=r"D:\project\DEEP LEARN PROJECT\NIH Chest X-rays\Dataset\images", help="Path to images directory")
-    parser.add_argument("--train_val_path", type=str, default=r"D:\project\DEEP LEARN PROJECT\NIH Chest X-rays\Dataset\train_val_list.txt", help="Path to train_val_list.txt")
-    parser.add_argument("--model_name", type=str, default="densenet121", choices=["densenet121", "resnet50", "resnet18", "densenet169", "chexnet", "efficientnet_b4", "swin_t"], help="Model architecture")
-    parser.add_argument("--checkpoint_path", type=str, default="./checkpoints/best_model_auc.pth", help="Path to model checkpoint .pth file")
+    parser.add_argument("--csv_path", type=str, default=r"D:\project\DEEP LEARN PROJECT\NIH Chest X-rays\chestxray14\Data_Entry_2017.csv", help="Path to Data_Entry_2017.csv")
+    parser.add_argument("--img_dir", type=str, default=r"D:\project\DEEP LEARN PROJECT\NIH Chest X-rays\chestxray14\images", help="Path to images directory")
+    parser.add_argument("--train_val_path", type=str, default=r"D:\project\DEEP LEARN PROJECT\NIH Chest X-rays\chestxray14\train_val_list.txt", help="Path to train_val_list.txt")
+    parser.add_argument("--model_name", type=str, default="densenet121", choices=["densenet121", "resnet50", "resnet18", "densenet169", "chexnet", "efficientnet_b4", "efficientnet_b7", "swin_t", "convnext_large"], help="Model architecture")
+    parser.add_argument("--checkpoint_path", type=str, default=None, help="Path to model checkpoint .pth file")
     parser.add_argument("--batch_size", type=int, default=32, help="Batch size")
     parser.add_argument("--num_workers", type=int, default=4, help="Number of workers for DataLoader")
     parser.add_argument("--output_report", type=str, default="evaluation_report.txt", help="Path to save evaluation output text file")
+    parser.add_argument("--sample_percent", type=float, default=100.0, help="Percentage of test set to evaluate (e.g., 12 for 12%)")
     args = parser.parse_args()
     
+    # Auto-resolve checkpoint path if not provided
+    if args.checkpoint_path is None:
+        model_checkpoints = {
+            "densenet121": r"checkpoints/densenet121_best_accuracy_run/best_model_auc.pth",
+            "chexnet": r"checkpoints/chexnet_run/best_model_auc.pth",
+            "resnet50": r"checkpoints/resnet50_run/best_model_auc.pth",
+            "efficientnet_b4": r"checkpoints/effnet_run/best_model_auc.pth",
+            "efficientnet_b7": r"checkpoints/effnet_b7_run/best_model_auc.pth",
+            "swin_t": r"checkpoints/swin_run/best_model_auc.pth",
+            "convnext_large": r"checkpoints/convnext_l_run/best_model_auc.pth"
+        }
+        args.checkpoint_path = model_checkpoints.get(args.model_name, r"./checkpoints/best_model_auc.pth")
+
+    # Auto-adjust output report name for sample runs
+    if args.sample_percent < 100.0 and args.output_report == "evaluation_report.txt":
+        args.output_report = f"evaluation_report_{int(args.sample_percent)}pct.txt"
+
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     print(f"Using device: {device}")
     
@@ -58,7 +76,8 @@ def main():
         img_dir=args.img_dir,
         train_val_list_path=args.train_val_path,
         batch_size=args.batch_size,
-        num_workers=args.num_workers
+        num_workers=args.num_workers,
+        sample_percent=args.sample_percent
     )
     
     # 2. Load Model Architecture
@@ -135,7 +154,7 @@ def main():
     }
     
     folder_name = model_to_folder.get(args.model_name, f"{args.model_name}-test-output")
-    output_dir = os.path.join(r"D:\project\DEEP LEARN PROJECT\NIH Chest X-rays\Dataset\info", folder_name)
+    output_dir = os.path.join(r"D:\project\DEEP LEARN PROJECT\NIH Chest X-rays\chestxray14\info", folder_name)
     os.makedirs(output_dir, exist_ok=True)
     
     if os.path.isabs(args.output_report):

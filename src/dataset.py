@@ -53,7 +53,7 @@ class NIHChestXRayDataset(Dataset):
 
         return image, label
 
-def get_dataloaders(csv_path, img_dir, train_val_list_path, batch_size=32, num_workers=4, pin_memory=True, augment_brightness_contrast=False):
+def get_dataloaders(csv_path, img_dir, train_val_list_path, batch_size=32, num_workers=4, pin_memory=True, augment_brightness_contrast=False, sample_percent=100.0):
     """
     Helper function to load CSV data, split at patient level, and create DataLoader instances.
     """
@@ -71,6 +71,11 @@ def get_dataloaders(csv_path, img_dir, train_val_list_path, batch_size=32, num_w
     # Split dataset into train_val and test sets based on train_val_list.txt
     df_train_val_all = df[df['Image Index'].isin(train_val_images)].copy()
     df_test = df[~df['Image Index'].isin(train_val_images)].copy()
+
+    if sample_percent < 100.0:
+        frac = sample_percent / 100.0
+        print(f"Sampling {sample_percent}% of test dataset ({frac*100:.1f}%)...")
+        df_test = df_test.sample(frac=frac, random_state=42).reset_index(drop=True)
 
     # 3. Patient-level train/validation split (prevent data leakage)
     # We take unique patient IDs from df_train_val_all and split them 80/20

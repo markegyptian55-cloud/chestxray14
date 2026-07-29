@@ -11,13 +11,15 @@ def get_model(model_name="densenet121", num_classes=14, pretrained=True):
     
     # Map model names to their respective weight directories
     model_weight_dirs = {
-        "densenet121": r"D:\project\DEEP LEARN PROJECT\NIH Chest X-rays\Dataset\pre-trained DenseNet121 small",
-        "chexnet": r"D:\project\DEEP LEARN PROJECT\NIH Chest X-rays\Dataset\pre-trained CheXNet small",
-        "resnet50": r"D:\project\DEEP LEARN PROJECT\NIH Chest X-rays\Dataset\pre-trained resnet50",
-        "resnet18": r"D:\project\DEEP LEARN PROJECT\NIH Chest X-rays\Dataset\pre-trained DenseNet121 small", # fallback folder
-        "densenet169": r"D:\project\DEEP LEARN PROJECT\NIH Chest X-rays\Dataset\pre-trained DenseNet121 small", # fallback folder
-        "efficientnet_b4": r"D:\project\DEEP LEARN PROJECT\NIH Chest X-rays\Dataset\pre-trained efficientnet_b4 medium",
-        "swin_t": r"D:\project\DEEP LEARN PROJECT\NIH Chest X-rays\Dataset\pre-trained Swin-T medium"
+        "densenet121": r"D:\project\DEEP LEARN PROJECT\NIH Chest X-rays\chestxray14\pre-trained DenseNet121 small",
+        "chexnet": r"D:\project\DEEP LEARN PROJECT\NIH Chest X-rays\chestxray14\pre-trained CheXNet small",
+        "resnet50": r"D:\project\DEEP LEARN PROJECT\NIH Chest X-rays\chestxray14\pre-trained resnet50",
+        "resnet18": r"D:\project\DEEP LEARN PROJECT\NIH Chest X-rays\chestxray14\pre-trained DenseNet121 small", # fallback folder
+        "densenet169": r"D:\project\DEEP LEARN PROJECT\NIH Chest X-rays\chestxray14\pre-trained DenseNet121 small", # fallback folder
+        "efficientnet_b4": r"D:\project\DEEP LEARN PROJECT\NIH Chest X-rays\chestxray14\pre-trained efficientnet_b4 medium",
+        "efficientnet_b7": r"D:\project\DEEP LEARN PROJECT\NIH Chest X-rays\chestxray14\pre-trained EfficientNet-B7 large",
+        "swin_t": r"D:\project\DEEP LEARN PROJECT\NIH Chest X-rays\chestxray14\pre-trained Swin-T medium",
+        "convnext_large": r"D:\project\DEEP LEARN PROJECT\NIH Chest X-rays\chestxray14\pre-trained ConvNeXt-Large"
     }
     
     # Map model names to weight file names
@@ -28,7 +30,9 @@ def get_model(model_name="densenet121", num_classes=14, pretrained=True):
         "resnet18": "resnet18-f37072fd.pth",
         "densenet169": "densenet169-b2777c96.pth",
         "efficientnet_b4": "efficientnet_b4_rwightman-23ab8bcd.pth",
-        "swin_t": "swin_t-704ceda3.pth"
+        "efficientnet_b7": "efficientnet_b7_lukemelas-c5b4e57e.pth",
+        "swin_t": "swin_t-704ceda3.pth",
+        "convnext_large": "convnext_large-ea097f82.pth"
     }
 
     def load_base_model(name):
@@ -50,8 +54,12 @@ def get_model(model_name="densenet121", num_classes=14, pretrained=True):
                     model = models.densenet169(weights=None)
                 elif name == "efficientnet_b4":
                     model = models.efficientnet_b4(weights=None)
+                elif name == "efficientnet_b7":
+                    model = models.efficientnet_b7(weights=None)
                 elif name == "swin_t":
                     model = models.swin_t(weights=None)
+                elif name == "convnext_large":
+                    model = models.convnext_large(weights=None)
                 
                 # Load state dict
                 state_dict = torch.load(local_path, map_location="cpu", weights_only=False)
@@ -82,8 +90,7 @@ def get_model(model_name="densenet121", num_classes=14, pretrained=True):
 
                 missing_keys, unexpected_keys = model.load_state_dict(state_dict, strict=False)
                 if len(unexpected_keys) > 0:
-                    # Filter classifier-related unexpected keys to print a short summary
-                    clf_keys = [k for k in unexpected_keys if "classifier" in k]
+                    clf_keys = [k for k in unexpected_keys if "classifier" in k or "head" in k]
                     if len(clf_keys) > 0:
                         print(f"Skipped loading pre-trained classifier keys (this is expected for fine-tuning): {clf_keys}")
                 return model
@@ -124,6 +131,13 @@ def get_model(model_name="densenet121", num_classes=14, pretrained=True):
                 return models.efficientnet_b4(weights=weights)
             except ImportError:
                 return models.efficientnet_b4(pretrained=pretrained)
+        elif name == "efficientnet_b7":
+            try:
+                from torchvision.models import EfficientNet_B7_Weights
+                weights = EfficientNet_B7_Weights.DEFAULT if pretrained else None
+                return models.efficientnet_b7(weights=weights)
+            except ImportError:
+                return models.efficientnet_b7(pretrained=pretrained)
         elif name == "swin_t":
             try:
                 from torchvision.models import Swin_T_Weights
@@ -131,6 +145,13 @@ def get_model(model_name="densenet121", num_classes=14, pretrained=True):
                 return models.swin_t(weights=weights)
             except ImportError:
                 return models.swin_t(pretrained=pretrained)
+        elif name == "convnext_large":
+            try:
+                from torchvision.models import ConvNeXt_Large_Weights
+                weights = ConvNeXt_Large_Weights.DEFAULT if pretrained else None
+                return models.convnext_large(weights=weights)
+            except ImportError:
+                return models.convnext_large(pretrained=pretrained)
         else:
             raise ValueError(f"Unknown base model: {name}")
 
@@ -143,12 +164,17 @@ def get_model(model_name="densenet121", num_classes=14, pretrained=True):
     elif model_name in ["resnet50", "resnet18"]:
         num_features = model.fc.in_features
         model.fc = nn.Linear(num_features, num_classes)
-    elif model_name == "efficientnet_b4":
+    elif model_name in ["efficientnet_b4", "efficientnet_b7"]:
         num_features = model.classifier[1].in_features
         model.classifier[1] = nn.Linear(num_features, num_classes)
     elif model_name == "swin_t":
         num_features = model.head.in_features
         model.head = nn.Linear(num_features, num_classes)
+    elif model_name == "convnext_large":
+        num_features = model.classifier[2].in_features
+        model.classifier[2] = nn.Linear(num_features, num_classes)
+        
+    return model
         
     return model
 

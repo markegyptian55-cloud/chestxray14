@@ -85,7 +85,7 @@ MODEL_FOLDER = {
     "swin_t":         "swin_t-test-output",
 }
 
-BASE_INFO = r"D:\project\DEEP LEARN PROJECT\NIH Chest X-rays\Dataset\info"
+BASE_INFO = r"D:\project\DEEP LEARN PROJECT\NIH Chest X-rays\chestxray14\info"
 
 # ══════════════════════════════════════════════════════════════════════════════
 # INFERENCE
@@ -134,7 +134,7 @@ def run_inference(model_name, checkpoint_path, batch_size, num_workers,
 def savefig(fig, path, dpi=180):
     fig.savefig(path, dpi=dpi, facecolor=BG, bbox_inches="tight")
     plt.close(fig)
-    print(f"  ✔  Saved: {os.path.basename(path)}")
+    print(f"  [OK] Saved: {os.path.basename(path)}")
 
 
 def auc_color(auc):
@@ -545,14 +545,14 @@ def main():
     parser = argparse.ArgumentParser(description="Generate 10 model visualizations for NIH Chest X-ray models")
     parser.add_argument("--model_name",      type=str, required=True,
                         choices=["densenet121","resnet50","resnet18","densenet169",
-                                 "chexnet","efficientnet_b4","swin_t"])
+                                 "chexnet","efficientnet_b4","swin_t","convnext_large","efficientnet_b7"])
     parser.add_argument("--checkpoint_path", type=str, required=True)
     parser.add_argument("--csv_path",        type=str,
-                        default=r"D:\project\DEEP LEARN PROJECT\NIH Chest X-rays\Dataset\Data_Entry_2017.csv")
+                        default=r"D:\project\DEEP LEARN PROJECT\NIH Chest X-rays\chestxray14\Data_Entry_2017.csv")
     parser.add_argument("--img_dir",         type=str,
-                        default=r"D:\project\DEEP LEARN PROJECT\NIH Chest X-rays\Dataset\images")
+                        default=r"D:\project\DEEP LEARN PROJECT\NIH Chest X-rays\chestxray14\images")
     parser.add_argument("--train_val_path",  type=str,
-                        default=r"D:\project\DEEP LEARN PROJECT\NIH Chest X-rays\Dataset\train_val_list.txt")
+                        default=r"D:\project\DEEP LEARN PROJECT\NIH Chest X-rays\chestxray14\train_val_list.txt")
     parser.add_argument("--batch_size",      type=int, default=32)
     parser.add_argument("--num_workers",     type=int, default=4)
     args = parser.parse_args()

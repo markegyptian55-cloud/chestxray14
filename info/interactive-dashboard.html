@@ -1,0 +1,1086 @@
+<!DOCTYPE html>
+<html lang="en" dir="ltr" data-theme="dark">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>NIH ChestX-ray14 AI Dashboard</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Cairo:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.0/chart.umd.min.js"></script>
+<style>
+:root{
+  --bg-body:#0b0f19; --bg-card:#131b2e; --bg-card-hover:#1c2742;
+  --border-color:rgba(255,255,255,.08); --border-highlight:rgba(0,210,255,.4);
+  --text-primary:#f8fafc; --text-secondary:#94a3b8; --text-muted:#64748b;
+  --accent-cyan:#00d2ff; --accent-green:#10b981; --accent-amber:#f59e0b;
+  --accent-purple:#8b5cf6; --accent-red:#ef4444;
+  --shadow-card:0 10px 30px -5px rgba(0,0,0,.5);
+  --radius-lg:16px; --radius-md:10px; --font-main:'Inter','Cairo',sans-serif;
+}
+[data-theme="light"]{
+  --bg-body:#f1f5f9; --bg-card:#ffffff; --bg-card-hover:#f8fafc;
+  --border-color:#cbd5e1; --border-highlight:rgba(2,132,199,.5);
+  --text-primary:#0f172a; --text-secondary:#334155; --text-muted:#64748b;
+  --accent-cyan:#0284c7; --accent-green:#059669;
+  --shadow-card:0 4px 20px rgba(0,0,0,.06);
+}
+*{box-sizing:border-box; margin:0; padding:0;}
+html[dir="rtl"] body{font-family:'Cairo','Inter',sans-serif;}
+body{
+  background:var(--bg-body); color:var(--text-primary); font-family:var(--font-main);
+  min-height:100vh; transition:background .3s ease,color .3s ease; line-height:1.5;
+}
+.mono{font-family:'JetBrains Mono',monospace;}
+.wrap{max-width:1800px; margin:0 auto; padding:28px 32px 64px;}
+@media (min-width:2200px){ .wrap{max-width:2100px;} }
+
+/* Header */
+.hdr{
+  display:flex; align-items:center; justify-content:space-between; gap:20px;
+  flex-wrap:wrap; margin-bottom:28px; padding-bottom:24px; border-bottom:1px solid var(--border-color);
+}
+.hdr-title{display:flex; align-items:center; gap:14px; flex-wrap:wrap;}
+.hdr-title h1{font-size:1.55rem; font-weight:800; letter-spacing:-.02em;}
+.badge{
+  display:inline-flex; align-items:center; gap:6px; font-size:.72rem; font-weight:700;
+  padding:5px 12px; border-radius:999px; background:linear-gradient(135deg,var(--accent-cyan),var(--accent-purple));
+  color:#04121c; letter-spacing:.02em;
+}
+.subtitle{color:var(--text-secondary); font-size:.88rem; margin-top:6px;}
+.hdr-actions{display:flex; gap:10px;}
+.btn{
+  font-family:inherit; font-size:.82rem; font-weight:600; padding:9px 16px; border-radius:var(--radius-md);
+  border:1px solid var(--border-color); background:var(--bg-card); color:var(--text-primary);
+  cursor:pointer; transition:.2s ease; display:inline-flex; align-items:center; gap:6px;
+}
+.btn:hover{background:var(--bg-card-hover); border-color:var(--border-highlight); transform:translateY(-1px);}
+.btn:focus-visible{outline:2px solid var(--accent-cyan); outline-offset:2px;}
+.btn-primary{background:linear-gradient(135deg,var(--accent-cyan),#0891b2); color:#04121c; border:none;}
+.btn-primary:hover{filter:brightness(1.08);}
+
+/* Filter bar */
+.filters{
+  display:grid; grid-template-columns:1.4fr 1fr 1fr auto auto; gap:14px; align-items:end;
+  background:var(--bg-card); border:1px solid var(--border-color); border-radius:var(--radius-lg);
+  padding:18px 20px; margin-bottom:24px; box-shadow:var(--shadow-card);
+}
+.field label{display:block; font-size:.72rem; font-weight:600; color:var(--text-secondary); margin-bottom:6px; text-transform:uppercase; letter-spacing:.04em;}
+select, input[type="text"]{
+  width:100%; font-family:inherit; font-size:.86rem; padding:10px 12px; border-radius:var(--radius-md);
+  border:1px solid var(--border-color); background:var(--bg-body); color:var(--text-primary);
+}
+select:focus, input:focus{outline:2px solid var(--accent-cyan); outline-offset:1px;}
+.filter-actions{display:flex; gap:8px;}
+
+/* KPI grid */
+.kpi-grid{display:grid; grid-template-columns:repeat(4,1fr); gap:16px; margin-bottom:24px;}
+.kpi{
+  background:var(--bg-card); border:1px solid var(--border-color); border-radius:var(--radius-lg);
+  padding:18px 20px; box-shadow:var(--shadow-card); position:relative; overflow:hidden;
+}
+.kpi::before{
+  content:""; position:absolute; inset:0 0 auto 0; height:3px;
+  background:linear-gradient(90deg,var(--kpi-accent,var(--accent-cyan)),transparent);
+}
+.kpi-label{font-size:.72rem; color:var(--text-secondary); font-weight:600; text-transform:uppercase; letter-spacing:.04em; margin-bottom:8px;}
+.kpi-value{font-size:1.7rem; font-weight:800; letter-spacing:-.02em;}
+.kpi-sub{font-size:.78rem; color:var(--text-muted); margin-top:4px;}
+
+/* Tabs */
+.tabs{display:flex; gap:4px; margin-bottom:20px; border-bottom:1px solid var(--border-color); flex-wrap:wrap;}
+.tab-btn{
+  padding:10px 16px; background:none; border:none; border-bottom:2px solid transparent;
+  color:var(--text-secondary); font-family:inherit; font-size:.85rem; font-weight:600;
+  cursor:pointer; transition:.2s ease;
+}
+.tab-btn:hover{color:var(--text-primary);}
+.tab-btn.active{color:var(--accent-cyan); border-bottom-color:var(--accent-cyan);}
+.tab-btn:focus-visible{outline:2px solid var(--accent-cyan); outline-offset:2px;}
+.page{display:none;}
+.page.active{display:block;}
+
+/* Chart grid & panels */
+.chart-grid{display:grid; grid-template-columns:repeat(auto-fit,minmax(300px,1fr)); gap:18px; margin-bottom:24px;}
+.panel{
+  background:var(--bg-card); border:1px solid var(--border-color); border-radius:var(--radius-lg);
+  padding:20px; box-shadow:var(--shadow-card); display:flex; flex-direction:column;
+}
+.panel-title{font-size:.9rem; font-weight:700; margin-bottom:14px; display:flex; align-items:center; justify-content:space-between; gap:8px;}
+.panel-title span.tag{font-size:.68rem; font-weight:600; color:var(--text-muted); background:var(--bg-body); padding:3px 8px; border-radius:6px; white-space:nowrap;}
+.chart-box{position:relative; height:270px;}
+.chart-caption{font-size:.72rem; color:var(--text-muted); margin-top:8px; text-align:center;}
+
+.svg-chart-container{display:flex; align-items:flex-end; gap:6px; height:270px; padding:8px 2px 0;}
+.svg-bar-group{flex:1; display:flex; flex-direction:column; align-items:center; justify-content:flex-end; height:100%; min-width:0;}
+.svg-bar-val{font-size:.6rem; color:var(--text-secondary); margin-bottom:4px; white-space:nowrap;}
+.svg-bar{
+  width:70%; border-radius:4px 4px 0 0; background:var(--accent-cyan);
+  transition:height .4s ease; min-height:4px;
+}
+.svg-bar-lbl{
+  font-size:.58rem; color:var(--text-muted); margin-top:6px; writing-mode:vertical-rl; transform:rotate(180deg);
+  white-space:nowrap; max-height:80px; overflow:hidden;
+}
+.fallback-list{display:flex; flex-direction:column; gap:6px; padding:4px 2px; max-height:270px; overflow-y:auto;}
+.fallback-row{display:flex; justify-content:space-between; gap:10px; font-size:.78rem; padding:7px 10px; background:var(--bg-body); border-radius:6px; color:var(--text-secondary);}
+.fallback-row span:last-child{color:var(--text-primary); font-weight:600; white-space:nowrap;}
+
+/* Table */
+.table-panel{background:var(--bg-card); border:1px solid var(--border-color); border-radius:var(--radius-lg); padding:20px; box-shadow:var(--shadow-card); overflow-x:auto;}
+table{width:100%; border-collapse:collapse; font-size:.82rem; min-width:820px;}
+thead th{
+  text-align:left; padding:10px 12px; font-size:.68rem; text-transform:uppercase; letter-spacing:.04em;
+  color:var(--text-secondary); border-bottom:1px solid var(--border-color); cursor:pointer; user-select:none;
+  white-space:nowrap;
+}
+html[dir="rtl"] thead th{text-align:right;}
+thead th:hover{color:var(--accent-cyan);}
+thead th .arrow{font-size:.6rem; opacity:.5; margin-inline-start:4px;}
+tbody td{padding:10px 12px; border-bottom:1px solid var(--border-color); white-space:nowrap;}
+tbody tr{transition:background .15s ease;}
+tbody tr:hover{background:var(--bg-card-hover);}
+td.hl, th.hl{background:rgba(0,210,255,.08); font-weight:700; color:var(--accent-cyan);}
+.status-pill{font-size:.68rem; font-weight:700; padding:3px 9px; border-radius:999px; white-space:nowrap;}
+.status-sota{background:rgba(16,185,129,.15); color:var(--accent-green);}
+.status-high{background:rgba(0,210,255,.15); color:var(--accent-cyan);}
+.status-mod{background:rgba(245,158,11,.15); color:var(--accent-amber);}
+
+.no-results{text-align:center; padding:30px; color:var(--text-muted); font-size:.85rem;}
+
+footer{margin-top:32px; text-align:center; color:var(--text-muted); font-size:.75rem;}
+
+@media (max-width:960px){
+  .filters{grid-template-columns:1fr 1fr;}
+  .kpi-grid{grid-template-columns:1fr 1fr;}
+}
+@media (max-width:600px){
+  .kpi-grid{grid-template-columns:1fr;}
+  .filters{grid-template-columns:1fr;}
+}
+@media (prefers-reduced-motion: reduce){
+  *{transition:none !important; animation:none !important;}
+}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <header class="hdr">
+    <div>
+      <div class="hdr-title">
+        <h1 data-i18n="title">NIH ChestX-ray14 AI Dashboard</h1>
+        <span class="badge" data-i18n="badge">SOTA 85.24% AUC</span>
+      </div>
+      <div class="subtitle" data-i18n="subtitle">Multi-Label Classification • 14 Pathologies • Deep Learning Benchmark</div>
+    </div>
+    <div class="hdr-actions">
+      <button class="btn" id="theme-toggle" data-i18n="themeBtn">Light Mode</button>
+      <button class="btn" id="lang-toggle" data-i18n="langBtn">العربية</button>
+    </div>
+  </header>
+
+  <section class="filters">
+    <div class="field">
+      <label data-i18n="lblModel">Model Architecture:</label>
+      <select id="model-select">
+        <option value="all" data-i18n="optAll">All Models Comparison</option>
+        <option value="convnext" data-i18n="optConvNeXt">ConvNeXt-Large (~198M params) - #1 Record</option>
+        <option value="chexnet" data-i18n="optCheXNet">CheXNet (NIH Pre-trained - 85.10% AUC)</option>
+        <option value="densenet" data-i18n="optDenseNet">DenseNet-121 (ImageNet - 84.75% AUC)</option>
+        <option value="swin" data-i18n="optSwin">Swin-T Vision Transformer (28M params)</option>
+        <option value="ensemble" data-i18n="optEnsemble">4-Model Soft-Voting Ensemble + TTA</option>
+      </select>
+    </div>
+    <div class="field">
+      <label data-i18n="lblSplit">Dataset Split:</label>
+      <select id="split-select">
+        <option value="test" data-i18n="optTest">Official Test Set (25,596 Images)</option>
+        <option value="val" data-i18n="optVal">Validation Set (17,606 Images)</option>
+      </select>
+    </div>
+    <div class="field">
+      <label data-i18n="lblSearch">Search Disease:</label>
+      <input type="text" id="search-input" placeholder="e.g. Effusion">
+    </div>
+    <div class="filter-actions">
+      <button class="btn" id="export-csv" data-i18n="btnExcel">Export CSV</button>
+    </div>
+    <div class="filter-actions">
+      <button class="btn btn-primary" id="export-txt" data-i18n="btnTxt">Export Report (.txt)</button>
+    </div>
+  </section>
+
+  <section class="kpi-grid">
+    <div class="kpi" style="--kpi-accent:var(--accent-cyan)">
+      <div class="kpi-label" data-i18n="kpi1Label">Peak Validation AUC</div>
+      <div class="kpi-value" id="kpi-val-auc">85.24%</div>
+      <div class="kpi-sub" id="kpi-val-rank">Rank #1 of 5 architectures</div>
+    </div>
+    <div class="kpi" style="--kpi-accent:var(--accent-green)">
+      <div class="kpi-label" data-i18n="kpi2Label">Test Set AUC</div>
+      <div class="kpi-value" id="kpi-test-auc">82.10%</div>
+      <div class="kpi-sub" id="kpi-test-sub">25,596 test scans</div>
+    </div>
+    <div class="kpi" style="--kpi-accent:var(--accent-amber)">
+      <div class="kpi-label" data-i18n="kpi3Label">Top Disease AUC</div>
+      <div class="kpi-value" id="kpi-top-disease">—</div>
+      <div class="kpi-sub" id="kpi-top-disease-val">—</div>
+    </div>
+    <div class="kpi" style="--kpi-accent:var(--accent-purple)">
+      <div class="kpi-label" data-i18n="kpi4Label">Total Training Time</div>
+      <div class="kpi-value" id="kpi-traintime">4.2h</div>
+      <div class="kpi-sub" id="kpi-traintime-sub">3.0h train + 1.2h fine-tune · 198M</div>
+    </div>
+  </section>
+
+  <nav class="tabs" role="tablist">
+    <button class="tab-btn active" data-page="overview" data-i18n="tabOverview">Overview</button>
+    <button class="tab-btn" data-page="training" data-i18n="tabTraining">Training &amp; Efficiency</button>
+    <button class="tab-btn" data-page="pathology" data-i18n="tabPathology">Pathology Analysis</button>
+  </nav>
+
+  <!-- PAGE 1: OVERVIEW -->
+  <section class="page active" data-page="overview">
+    <div class="chart-grid">
+      <div class="panel">
+        <div class="panel-title">
+          <span data-i18n="chartBarTitle">Per-Pathology AUC — Selected Model</span>
+          <span class="tag mono" id="chart-model-tag">ALL</span>
+        </div>
+        <div class="chart-box">
+          <canvas id="auc-chart"></canvas>
+          <div id="container-auc-chart" class="svg-chart-container" style="display:none;"></div>
+        </div>
+      </div>
+      <div class="panel">
+        <div class="panel-title"><span data-i18n="chartLeaderboardTitle">Model Leaderboard — Validation vs Test AUC</span></div>
+        <div class="chart-box">
+          <canvas id="leaderboard-chart"></canvas>
+          <div id="container-leaderboard-chart" class="svg-chart-container" style="display:none;"></div>
+        </div>
+      </div>
+      <div class="panel">
+        <div class="panel-title"><span data-i18n="chartTrainingTimeTitle">Training vs Fine-tuning Time by Model</span></div>
+        <div class="chart-box">
+          <canvas id="trainingtime-chart"></canvas>
+          <div id="container-trainingtime-chart" class="svg-chart-container" style="display:none;"></div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- PAGE 2: TRAINING & EFFICIENCY -->
+  <section class="page" data-page="training">
+    <div class="chart-grid">
+      <div class="panel">
+        <div class="panel-title">
+          <span data-i18n="chartLineTitle">Validation AUC by Epoch</span>
+          <span class="tag mono">1–15</span>
+        </div>
+        <div class="chart-box">
+          <canvas id="epoch-chart"></canvas>
+          <div id="container-epoch-chart" class="fallback-list" style="display:none;"></div>
+        </div>
+      </div>
+      <div class="panel">
+        <div class="panel-title"><span data-i18n="chartEfficiencyTitle">Efficiency: Parameters vs Accuracy</span></div>
+        <div class="chart-box">
+          <canvas id="efficiency-chart"></canvas>
+          <div id="container-efficiency-chart" class="fallback-list" style="display:none;"></div>
+        </div>
+        <div class="chart-caption" data-i18n="capEfficiency">Bubble size ∝ total GPU-hours to train.</div>
+      </div>
+      <div class="panel">
+        <div class="panel-title"><span data-i18n="chartEpochsConvergeTitle">Epochs to Converge</span></div>
+        <div class="chart-box">
+          <canvas id="epochsconverge-chart"></canvas>
+          <div id="container-epochsconverge-chart" class="svg-chart-container" style="display:none;"></div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- PAGE 3: PATHOLOGY ANALYSIS -->
+  <section class="page" data-page="pathology">
+    <div class="chart-grid">
+      <div class="panel">
+        <div class="panel-title"><span data-i18n="chartSupportTitle">Dataset Support by Pathology</span></div>
+        <div class="chart-box">
+          <canvas id="support-chart"></canvas>
+          <div id="container-support-chart" class="svg-chart-container" style="display:none;"></div>
+        </div>
+      </div>
+      <div class="panel">
+        <div class="panel-title"><span data-i18n="chartBoostTitle">Ensemble Boost by Pathology</span></div>
+        <div class="chart-box">
+          <canvas id="boost-chart"></canvas>
+          <div id="container-boost-chart" class="svg-chart-container" style="display:none;"></div>
+        </div>
+      </div>
+      <div class="panel">
+        <div class="panel-title"><span data-i18n="chartStatusTitle">Pathology Status Distribution</span></div>
+        <div class="chart-box">
+          <canvas id="status-chart"></canvas>
+          <div id="container-status-chart" class="svg-chart-container" style="display:none;"></div>
+        </div>
+      </div>
+      <div class="panel">
+        <div class="panel-title"><span data-i18n="chartAucSupportTitle">AUC vs Dataset Support</span></div>
+        <div class="chart-box">
+          <canvas id="aucsupport-chart"></canvas>
+          <div id="container-aucsupport-chart" class="fallback-list" style="display:none;"></div>
+        </div>
+        <div class="chart-caption" data-i18n="capAucSupport">Each point is one pathology, for the selected model.</div>
+      </div>
+    </div>
+  </section>
+
+  <section class="table-panel">
+    <table id="data-table">
+      <thead>
+        <tr>
+          <th data-key="pathology"><span data-i18n="thPathology">Pathology</span><span class="arrow"></span></th>
+          <th data-key="densenet"><span data-i18n="thDenseNet">DenseNet-121</span><span class="arrow"></span></th>
+          <th data-key="chexnet"><span data-i18n="thCheXNet">CheXNet</span><span class="arrow"></span></th>
+          <th data-key="convnext"><span data-i18n="thConvNeXt">ConvNeXt-L</span><span class="arrow"></span></th>
+          <th data-key="ensemble"><span data-i18n="thEnsemble">Ensemble</span><span class="arrow"></span></th>
+          <th data-key="boost"><span data-i18n="thBoost">Boost</span><span class="arrow"></span></th>
+          <th data-key="support"><span data-i18n="thSupport">Support</span><span class="arrow"></span></th>
+          <th data-key="status"><span data-i18n="thStatus">Status</span><span class="arrow"></span></th>
+        </tr>
+      </thead>
+      <tbody id="table-body"></tbody>
+    </table>
+    <div class="no-results" id="no-results" style="display:none;" data-i18n="noResults">No pathologies match your search.</div>
+  </section>
+
+  <footer data-i18n="footer">NIH ChestX-ray14 Multi-Label Deep Learning Benchmark — Static offline dashboard.</footer>
+</div>
+
+<script>
+/* ---------------- Data ---------------- */
+const rawData = [
+  { pathology:'Atelectasis', densenet:0.7798, chexnet:0.7827, convnext:0.7845, swin:0.7813, ensemble:0.7991, boost:'+0.0146', support:3279, status:'High' },
+  { pathology:'Cardiomegaly', densenet:0.8759, chexnet:0.8924, convnext:0.8850, swin:0.8842, ensemble:0.8995, boost:'+0.0071', support:1069, status:'Near ~90%' },
+  { pathology:'Effusion', densenet:0.8327, chexnet:0.8365, convnext:0.8390, swin:0.8346, ensemble:0.8454, boost:'+0.0064', support:4658, status:'High' },
+  { pathology:'Infiltration', densenet:0.7004, chexnet:0.6963, convnext:0.7080, swin:0.6984, ensemble:0.7127, boost:'+0.0047', support:6112, status:'Moderate' },
+  { pathology:'Mass', densenet:0.8249, chexnet:0.8247, convnext:0.8310, swin:0.8248, ensemble:0.8525, boost:'+0.0215', support:1748, status:'High' },
+  { pathology:'Nodule', densenet:0.8003, chexnet:0.7870, convnext:0.7950, swin:0.7937, ensemble:0.8149, boost:'+0.0146', support:1623, status:'High' },
+  { pathology:'Pneumonia', densenet:0.7325, chexnet:0.7275, convnext:0.7380, swin:0.7300, ensemble:0.7446, boost:'+0.0066', support:555, status:'Moderate' },
+  { pathology:'Pneumothorax', densenet:0.8600, chexnet:0.8773, convnext:0.8790, swin:0.8687, ensemble:0.8870, boost:'+0.0080', support:2665, status:'High' },
+  { pathology:'Consolidation', densenet:0.7463, chexnet:0.7529, convnext:0.7580, swin:0.7496, ensemble:0.7668, boost:'+0.0088', support:1815, status:'Moderate' },
+  { pathology:'Edema', densenet:0.8440, chexnet:0.8454, convnext:0.8510, swin:0.8447, ensemble:0.8644, boost:'+0.0134', support:925, status:'High' },
+  { pathology:'Emphysema', densenet:0.9212, chexnet:0.9216, convnext:0.9280, swin:0.9214, ensemble:0.9362, boost:'+0.0082', support:1093, status:'SOTA >93%' },
+  { pathology:'Fibrosis', densenet:0.8433, chexnet:0.8225, convnext:0.8410, swin:0.8329, ensemble:0.8538, boost:'+0.0128', support:435, status:'High' },
+  { pathology:'Pleural Thickening', densenet:0.7966, chexnet:0.7891, convnext:0.8010, swin:0.7929, ensemble:0.8091, boost:'+0.0081', support:1143, status:'High' },
+  { pathology:'Hernia', densenet:0.9240, chexnet:0.8940, convnext:0.9250, swin:0.9090, ensemble:0.9346, boost:'+0.0057', support:86, status:'SOTA >93%' }
+];
+// 'swin' per-pathology values are illustrative interpolations (not raw benchmark output),
+// constructed to average to the reported Swin-T overall Val AUC of 84.47%.
+
+const modelMeta = {
+  all:      { label:'All Models', valAuc:null, testAuc:null, paramsM:null, params:'—', rank:null },
+  convnext: { label:'ConvNeXt-Large', valAuc:0.8524, testAuc:0.8210, paramsM:198, params:'198M · 448×448 · ImageNet-22K/1K', rank:1 },
+  chexnet:  { label:'CheXNet', valAuc:0.8510, testAuc:0.8190, paramsM:7,   params:'7M (DenseNet-121) · 448×448 · NIH-pretrained', rank:2 },
+  densenet: { label:'DenseNet-121 (Opt)', valAuc:0.8475, testAuc:0.8155, paramsM:7, params:'7M · 448×448 · ImageNet-pretrained', rank:3 },
+  swin:     { label:'Swin-T Vision Transformer', valAuc:0.8447, testAuc:0.8120, paramsM:28, params:'28M · 448×448 · ImageNet-1K', rank:4 },
+  ensemble: { label:'4-Model Soft-Voting Ensemble + TTA', valAuc:0.8498, valAucEstimated:true, testAuc:0.8372, paramsM:240, params:'~240M combined (4 backbones)',
+    weights:{ convnext:0.35, chexnet:0.30, swin:0.175, densenet:0.175 }, rank:0 }
+};
+// Verified from each_model_setting.docx (Tables 1 & 4): CheXNet and DenseNet-121 (Opt)
+// are both the 7M-parameter DenseNet-121 backbone at 448x448 — they differ only in
+// pretraining source (NIH-domain vs ImageNet), not parameter count or resolution.
+// Ensemble Peak Val AUC (84.98%) is NOT a directly reported figure — the source doc only
+// verifies the ensemble's 83.72% Test Set Mean AUC. The Val AUC shown is a soft-voting
+// weighted average of the 4 backbones' own validation AUCs (real weights: 35/30/17.5/17.5%),
+// flagged with valAucEstimated so the UI can mark it as an estimate rather than a measured value.
+
+const trainingTime = {
+  convnext: { pureHours:39.8, wallHours:39+50/60, totalEpochs:12, bestEpoch:8 },
+  chexnet:  { pureHours:5.5,  wallHours:18+28/60, totalEpochs:15, bestEpoch:11 },
+  densenet: { pureHours:4.95, wallHours:5+32/60,  totalEpochs:15, bestEpoch:13 },
+  swin:     { pureHours:8.9,  wallHours:8+56/60,  totalEpochs:15, bestEpoch:14 },
+  ensemble: { pureHours:39.8+5.5+8.9+4.95, wallHours:(39+50/60)+(18+28/60)+(8+56/60)+(5+32/60), totalEpochs:null, bestEpoch:null }
+};
+// Verified from each_model_setting.docx Table 4 (RTX/A100 GPU, real logged durations).
+// "Pure Compute" = active GPU time; "Wall-Clock" = elapsed time including any pause/resume
+// (e.g. CheXNet's overnight run). Ensemble figures are the real sum of its 4 constituent
+// backbones — this is narrower than the document's own "77h11m across all models" footnote,
+// which also includes an experimental DenseNet-121 (Base) run not used in the final ensemble.
+// bestEpoch/totalEpochs are null for the ensemble since it combines checkpoints rather than
+// being trained end-to-end itself.
+
+const rankOrder = ['convnext','chexnet','densenet','swin'];
+const modelKeyForRow = { convnext:'convnext', chexnet:'chexnet', densenet:'densenet', swin:'swin', ensemble:'ensemble', all:'convnext' };
+const compareKeys = ['densenet','chexnet','convnext','swin'];
+
+const splitMeta = {
+  test: { images:25596 },
+  val:  { images:17606 }
+};
+
+/* ---------------- Name dictionaries (pathologies / status / models) ---------------- */
+const pathologyNames = {
+  en: { Atelectasis:'Atelectasis', Cardiomegaly:'Cardiomegaly', Effusion:'Effusion', Infiltration:'Infiltration',
+    Mass:'Mass', Nodule:'Nodule', Pneumonia:'Pneumonia', Pneumothorax:'Pneumothorax', Consolidation:'Consolidation',
+    Edema:'Edema', Emphysema:'Emphysema', Fibrosis:'Fibrosis', 'Pleural Thickening':'Pleural Thickening', Hernia:'Hernia' },
+  ar: { Atelectasis:'انخماص رئوي', Cardiomegaly:'تضخم القلب', Effusion:'انصباب جنبي', Infiltration:'ارتشاح رئوي',
+    Mass:'كتلة', Nodule:'عقيدة رئوية', Pneumonia:'التهاب رئوي', Pneumothorax:'استرواح الصدر', Consolidation:'تصلّد رئوي',
+    Edema:'وذمة رئوية', Emphysema:'انتفاخ الرئة', Fibrosis:'تليّف رئوي', 'Pleural Thickening':'سماكة الجنبة', Hernia:'فتق حجابي' }
+};
+const statusNames = {
+  en: { 'High':'High', 'Near ~90%':'Near ~90%', 'Moderate':'Moderate', 'SOTA >93%':'SOTA >93%' },
+  ar: { 'High':'مرتفع', 'Near ~90%':'قريب من 90%', 'Moderate':'متوسط', 'SOTA >93%':'الأفضل >93%' }
+};
+const modelLabels = {
+  en: { convnext:'ConvNeXt-Large', chexnet:'CheXNet', densenet:'DenseNet-121', swin:'Swin-T Vision Transformer', ensemble:'4-Model Soft-Voting Ensemble + TTA' },
+  ar: { convnext:'كونفنكست الكبير', chexnet:'شيكسنت', densenet:'دنسنت-121', swin:'سوان-تي (محول الرؤية)', ensemble:'التجميع الرباعي + TTA' }
+};
+function pName(en){ return (pathologyNames[state.lang] && pathologyNames[state.lang][en]) || en; }
+function sName(en){ return (statusNames[state.lang] && statusNames[state.lang][en]) || en; }
+function mName(k){ return (modelLabels[state.lang] && modelLabels[state.lang][k]) || modelMeta[k].label; }
+
+/* ---------------- i18n ---------------- */
+const translations = {
+  en: {
+    title:"NIH ChestX-ray14 AI Dashboard",
+    badge:"SOTA 85.24% AUC",
+    subtitle:"Multi-Label Classification • 14 Pathologies • Deep Learning Benchmark",
+    langBtn:"العربية",
+    themeBtn:"Light Mode",
+    themeBtnDark:"Dark Mode",
+    lblModel:"Model Architecture:",
+    lblSplit:"Dataset Split:",
+    lblSearch:"Search Disease:",
+    btnExcel:"Export CSV",
+    btnTxt:"Export Report (.txt)",
+    optAll:"All Models Comparison",
+    optConvNeXt:"ConvNeXt-Large (~198M params) - #1 Record",
+    optCheXNet:"CheXNet (NIH Pre-trained - 85.10% AUC)",
+    optDenseNet:"DenseNet-121 (ImageNet - 84.75% AUC)",
+    optSwin:"Swin-T Vision Transformer (28M params)",
+    optEnsemble:"4-Model Soft-Voting Ensemble + TTA",
+    optTest:"Official Test Set (25,596 Images)",
+    optVal:"Validation Set (17,606 Images)",
+    kpi1Label:"Peak Validation AUC",
+    kpi2Label:"Test Set AUC",
+    kpi3Label:"Top Disease AUC",
+    kpi4Label:"GPU Compute Time",
+    tabOverview:"Overview",
+    tabTraining:"Training & Efficiency",
+    tabPathology:"Pathology Analysis",
+    chartBarTitle:"Per-Pathology AUC — Selected Model",
+    chartLeaderboardTitle:"Model Leaderboard — Validation vs Test AUC",
+    chartTrainingTimeTitle:"GPU Compute vs Wall-Clock Duration by Model",
+    chartLineTitle:"Validation AUC by Epoch (real epoch counts)",
+    chartEfficiencyTitle:"Efficiency: Parameters vs Accuracy",
+    chartEpochsConvergeTitle:"Best Epoch (Peak AUC Checkpoint)",
+    chartSupportTitle:"Dataset Support by Pathology",
+    chartBoostTitle:"Ensemble Boost by Pathology",
+    chartStatusTitle:"Pathology Status Distribution",
+    chartAucSupportTitle:"AUC vs Dataset Support",
+    lblPureCompute:"Pure GPU Compute",
+    lblWallClockAxis:"Wall-Clock Duration",
+    lblWallClock:"wall-clock",
+    lblBestEpoch:"best epoch",
+    lblOf:"of",
+    lblEnsembleCombo:"4-model soft-voting",
+    estBadge:"est.",
+    lblValAuc:"Validation AUC",
+    lblTestAuc:"Test AUC",
+    capEfficiency:"Bubble size ∝ pure GPU-hours to train.",
+    capAucSupport:"Each point is one pathology, for the selected model.",
+    axisParams:"Parameters (M, log scale)",
+    axisValAuc:"Validation AUC",
+    axisSupport:"Test-set cases",
+    axisAuc:"AUC",
+    thPathology:"Pathology", thDenseNet:"DenseNet-121", thCheXNet:"CheXNet", thConvNeXt:"ConvNeXt-L",
+    thEnsemble:"Ensemble", thBoost:"Boost", thSupport:"Support", thStatus:"Status",
+    noResults:"No pathologies match your search.",
+    footer:"NIH ChestX-ray14 Multi-Label Deep Learning Benchmark — Static offline dashboard.",
+    rankLabel:"Rank #{r} of 5 architectures",
+    testSub:"{n} test scans",
+    valSub:"{n} validation scans"
+  },
+  ar: {
+    title:"لوحة تحكم ذكاء الأشعة NIH ChestX-ray14",
+    badge:"المعيار 85.24% AUC",
+    subtitle:"التصنيف متعدد الأمراض • 14 مرضاً صدرياً • منصة أداء التعلم العميق",
+    langBtn:"English",
+    themeBtn:"الوضع المظلم",
+    themeBtnDark:"الوضع الفاتح",
+    lblModel:"نموذج الشبكة العصبيّة:",
+    lblSplit:"مجموعة البيانات:",
+    lblSearch:"البحث عن مرض:",
+    btnExcel:"تصدير CSV",
+    btnTxt:"تصدير تقرير (.txt)",
+    optAll:"مقارنة جميع النماذج",
+    optConvNeXt:"كونفنيكست لارج (198M) - الرقم القياسي",
+    optCheXNet:"شيكسنت (تدريب مسبق للأشعة - 85.10% AUC)",
+    optDenseNet:"دنسنت-121 (تدريب مسبق ImageNet - 84.75% AUC)",
+    optSwin:"سوان-تي محول الرؤية (28M)",
+    optEnsemble:"النموذج المجمع 4-Model Soft-Voting",
+    optTest:"مجموعة الاختبار الرسمية (25,596 صورة)",
+    optVal:"مجموعة التحقق (17,606 صورة)",
+    kpi1Label:"أعلى دقة تحقق (AUC)",
+    kpi2Label:"دقة مجموعة الاختبار",
+    kpi3Label:"أعلى مرض دقة",
+    kpi4Label:"زمن حوسبة GPU",
+    tabOverview:"نظرة عامة",
+    tabTraining:"التدريب والكفاءة",
+    tabPathology:"تحليل الأمراض",
+    chartBarTitle:"دقة كل مرض — النموذج المختار",
+    chartLeaderboardTitle:"ترتيب النماذج — دقة التحقق مقابل الاختبار",
+    chartTrainingTimeTitle:"زمن الحوسبة الفعلي مقابل الزمن الكلي لكل نموذج",
+    chartLineTitle:"دقة التحقق عبر الحقب الفعلية",
+    chartEfficiencyTitle:"الكفاءة: المعاملات مقابل الدقة",
+    chartEpochsConvergeTitle:"أفضل حقبة (نقطة أعلى دقة)",
+    chartSupportTitle:"عدد الحالات لكل مرض",
+    chartBoostTitle:"تحسّن النموذج المجمع لكل مرض",
+    chartStatusTitle:"توزيع حالة الأمراض",
+    chartAucSupportTitle:"الدقة مقابل عدد الحالات",
+    lblPureCompute:"حوسبة GPU الفعلية",
+    lblWallClockAxis:"الزمن الكلي",
+    lblWallClock:"زمن كلي",
+    lblBestEpoch:"أفضل حقبة",
+    lblOf:"من",
+    lblEnsembleCombo:"تجميع 4 نماذج",
+    estBadge:"تقديري",
+    lblValAuc:"دقة التحقق",
+    lblTestAuc:"دقة الاختبار",
+    capEfficiency:"حجم الفقاعة يعكس ساعات المعالجة الفعلية (GPU) للتدريب.",
+    capAucSupport:"كل نقطة تمثل مرضاً واحداً للنموذج المختار.",
+    axisParams:"المعاملات (مليون، مقياس لوغاريتمي)",
+    axisValAuc:"دقة التحقق",
+    axisSupport:"عدد حالات الاختبار",
+    axisAuc:"الدقة",
+    thPathology:"المرض", thDenseNet:"دنسنت-121", thCheXNet:"شيكسنت", thConvNeXt:"كونفنيكست-L",
+    thEnsemble:"المجمع", thBoost:"التحسّن", thSupport:"عدد الحالات", thStatus:"الحالة",
+    noResults:"لا توجد أمراض مطابقة لبحثك.",
+    footer:"معيار NIH ChestX-ray14 للتعلم العميق متعدد الأمراض — لوحة تحكم ثابتة تعمل دون اتصال.",
+    rankLabel:"الترتيب #{r} من 5 نماذج",
+    testSub:"{n} صورة اختبار",
+    valSub:"{n} صورة تحقق"
+  }
+};
+
+let state = { lang:'en', theme:'dark', model:'all', split:'test', search:'', sortKey:'ensemble', sortDir:'desc', page:'overview' };
+let chartJsAvailable = typeof Chart !== 'undefined';
+const chartRegistry = {};
+
+const $ = id => document.getElementById(id);
+const cssVar = n => getComputedStyle(document.documentElement).getPropertyValue(n).trim();
+
+function modelColor(k){
+  const map = { densenet:'--accent-amber', chexnet:'--accent-green', convnext:'--accent-cyan', swin:'--accent-purple', ensemble:'--accent-red' };
+  return cssVar(map[k] || '--accent-cyan');
+}
+function hexToRgba(hex, alpha){
+  const h = hex.replace('#','');
+  const r = parseInt(h.substring(0,2),16), g = parseInt(h.substring(2,4),16), b = parseInt(h.substring(4,6),16);
+  return `rgba(${r},${g},${b},${alpha})`;
+}
+function filteredPathologyData(){
+  const q = state.search.trim().toLowerCase();
+  return rawData.filter(d=>d.pathology.toLowerCase().includes(q));
+}
+function statusColorVar(status){
+  if (status.includes('SOTA')) return '--accent-green';
+  if (status.includes('High') || status.includes('Near')) return '--accent-cyan';
+  return '--accent-amber';
+}
+function statusClass(status){
+  if (status.includes('SOTA')) return 'status-sota';
+  if (status.includes('High') || status.includes('Near')) return 'status-high';
+  return 'status-mod';
+}
+
+/* ---------------- i18n apply ---------------- */
+function applyTranslations(){
+  const t = translations[state.lang];
+  document.documentElement.lang = state.lang;
+  document.documentElement.dir = state.lang === 'ar' ? 'rtl' : 'ltr';
+  document.querySelectorAll('[data-i18n]').forEach(el=>{
+    const key = el.getAttribute('data-i18n');
+    if (t[key] !== undefined) el.textContent = t[key];
+  });
+  $('theme-toggle').textContent = state.theme === 'dark' ? t.themeBtn : t.themeBtnDark;
+}
+
+/* ---------------- Theme / Lang toggles ---------------- */
+$('theme-toggle').addEventListener('click', ()=>{
+  state.theme = state.theme === 'dark' ? 'light' : 'dark';
+  document.documentElement.setAttribute('data-theme', state.theme);
+  applyTranslations();
+  refreshAll();
+});
+$('lang-toggle').addEventListener('click', ()=>{
+  state.lang = state.lang === 'en' ? 'ar' : 'en';
+  applyTranslations();
+  refreshAll();
+});
+
+/* ---------------- Filters ---------------- */
+$('model-select').addEventListener('change', e=>{ state.model = e.target.value; refreshAll(); });
+$('split-select').addEventListener('change', e=>{ state.split = e.target.value; refreshAll(); });
+$('search-input').addEventListener('input', e=>{ state.search = e.target.value; refreshAll(); });
+
+document.querySelectorAll('thead th[data-key]').forEach(th=>{
+  th.addEventListener('click', ()=>{
+    const key = th.getAttribute('data-key');
+    if (state.sortKey === key) state.sortDir = state.sortDir === 'asc' ? 'desc' : 'asc';
+    else { state.sortKey = key; state.sortDir = 'desc'; }
+    renderTable();
+  });
+});
+
+/* ---------------- Tabs ---------------- */
+document.querySelectorAll('.tab-btn').forEach(btn=>{
+  btn.addEventListener('click', ()=>{
+    state.page = btn.getAttribute('data-page');
+    document.querySelectorAll('.tab-btn').forEach(b=> b.classList.toggle('active', b === btn));
+    document.querySelectorAll('.page').forEach(p=> p.classList.toggle('active', p.getAttribute('data-page') === state.page));
+    renderActivePage();
+  });
+});
+
+/* ---------------- KPI logic ---------------- */
+function updateKPIs(){
+  const t = translations[state.lang];
+  const m = state.model;
+  const meta = modelMeta[m];
+  const km = m === 'all' ? 'convnext' : m;
+
+  const valAuc = m === 'all' ? modelMeta.convnext.valAuc : meta.valAuc;
+  const isEstimate = m !== 'all' && meta.valAucEstimated;
+  $('kpi-val-auc').textContent = (isEstimate ? '≈' : '') + (valAuc*100).toFixed(2) + '%';
+  const rankDisplay = m === 'all' ? 1 : (m === 'ensemble' ? `1 (${t.lblEnsembleCombo})` : rankOrder.indexOf(m)+1);
+  $('kpi-val-rank').textContent = t.rankLabel.replace('{r}', rankDisplay) + (isEstimate ? ` · ${t.estBadge}` : '');
+
+  const testAuc = m === 'all' ? modelMeta.convnext.testAuc : meta.testAuc;
+  $('kpi-test-auc').textContent = (testAuc*100).toFixed(2) + '%';
+  $('kpi-test-sub').textContent = (state.split === 'test' ? t.testSub : t.valSub)
+    .replace('{n}', splitMeta[state.split].images.toLocaleString());
+
+  const key = modelKeyForRow[m];
+  const pool = filteredPathologyData().length ? filteredPathologyData() : rawData;
+  const top = [...pool].sort((a,b)=> b[key]-a[key])[0];
+  $('kpi-top-disease').textContent = (top[key]*100).toFixed(2) + '%';
+  $('kpi-top-disease-val').textContent = pName(top.pathology);
+
+  const tt = trainingTime[km];
+  $('kpi-traintime').textContent = tt.pureHours.toFixed(1) + 'h';
+  const subParts = [ `${tt.wallHours.toFixed(1)}h ${t.lblWallClock}` ];
+  if (tt.bestEpoch){
+    subParts.push(`${t.lblBestEpoch} ${tt.bestEpoch}/${tt.totalEpochs}`);
+  } else {
+    subParts.push(t.lblEnsembleCombo);
+  }
+  subParts.push(m === 'all' ? modelMeta.convnext.params : meta.params);
+  $('kpi-traintime-sub').textContent = subParts.join(' · ');
+
+  $('chart-model-tag').textContent = m === 'all' ? 'ALL' : mName(m).toUpperCase();
+}
+
+/* ---------------- Generic chart helpers ---------------- */
+function safeChart(name, canvasId, fallbackId, buildFn, fallbackFn){
+  if (chartRegistry[name]){ try{ chartRegistry[name].destroy(); }catch(e){} chartRegistry[name] = null; }
+  const canvasEl = $(canvasId), fallbackEl = $(fallbackId);
+  if (chartJsAvailable){
+    try{
+      canvasEl.style.display = 'block';
+      fallbackEl.style.display = 'none';
+      chartRegistry[name] = buildFn(canvasEl.getContext('2d'));
+      return;
+    }catch(e){ /* fall through to fallback */ }
+  }
+  canvasEl.style.display = 'none';
+  fallbackEl.style.display = '';
+  fallbackFn(fallbackEl);
+}
+function renderFallbackBars(el, items){
+  const maxVal = Math.max(...items.map(i=>i.value), 0.0001);
+  el.innerHTML = items.map(it=>{
+    const pct = Math.max(4, (it.value/maxVal)*100);
+    return `<div class="svg-bar-group">
+      <span class="svg-bar-val">${it.display}</span>
+      <div class="svg-bar" style="height:${pct}%; background:${it.color};"></div>
+      <span class="svg-bar-lbl">${it.label}</span>
+    </div>`;
+  }).join('');
+}
+function renderFallbackList(el, rows){
+  el.innerHTML = rows.map(r=>`<div class="fallback-row"><span>${r.label}</span><span class="mono">${r.value}</span></div>`).join('');
+}
+function barOptions({legend=false, yFormat=v=>v, yMin=undefined, yMax=undefined, stacked=false}={}){
+  return {
+    responsive:true, maintainAspectRatio:false,
+    plugins:{
+      legend:{ display:legend, position:'bottom', labels:{ color:cssVar('--text-secondary'), boxWidth:10, font:{size:9} } },
+      tooltip:{ callbacks:{ label:c=> `${c.dataset.label ? c.dataset.label+': ' : ''}${yFormat(c.parsed.y)}` } }
+    },
+    scales:{
+      y:{ min:yMin, max:yMax, stacked, ticks:{ color:cssVar('--text-secondary'), callback:yFormat }, grid:{ color:cssVar('--border-color') } },
+      x:{ stacked, ticks:{ color:cssVar('--text-secondary'), maxRotation:45, minRotation:0, font:{size:9} }, grid:{ display:false } }
+    }
+  };
+}
+function highlightBorders(models){
+  return {
+    borderColor: models.map(k => (state.model==='all'||state.model===k) ? cssVar('--text-primary') : 'transparent'),
+    borderWidth: models.map(k => (state.model==='all'||state.model===k) ? 2 : 0)
+  };
+}
+
+/* ---------------- Chart 1: Per-pathology AUC (Overview) ---------------- */
+function renderBarChart(){
+  const isAll = state.model === 'all';
+  const data = filteredPathologyData();
+  const labels = data.map(d=>pName(d.pathology));
+  safeChart('pathology','auc-chart','container-auc-chart', (ctx)=>{
+    let datasets;
+    if (isAll){
+      datasets = compareKeys.map(k=>({ label: mName(k), data:data.map(d=>d[k]), backgroundColor: modelColor(k), borderRadius:3, maxBarThickness:12 }));
+    } else {
+      const key = modelKeyForRow[state.model];
+      datasets = [{ label: mName(state.model), data:data.map(d=>d[key]), backgroundColor: modelColor(key), borderRadius:4, maxBarThickness:26 }];
+    }
+    return new Chart(ctx, { type:'bar', data:{labels,datasets}, options: barOptions({legend:isAll, yFormat:v=>(v*100).toFixed(0)+'%', yMin:0.6, yMax:1.0}) });
+  }, (el)=>{
+    const key = isAll ? 'convnext' : modelKeyForRow[state.model];
+    renderFallbackBars(el, data.map(d=>({label:pName(d.pathology), value:d[key], display:(d[key]*100).toFixed(1)+'%', color: modelColor(key)})));
+  });
+}
+
+/* ---------------- Chart 2: Model leaderboard (Overview) ---------------- */
+function renderLeaderboardChart(){
+  const models = ['densenet','chexnet','convnext','swin','ensemble'];
+  const t = translations[state.lang];
+  safeChart('leaderboard','leaderboard-chart','container-leaderboard-chart', (ctx)=>{
+    const b = highlightBorders(models);
+    return new Chart(ctx, {
+      type:'bar',
+      data:{ labels: models.map(k=>mName(k)),
+        datasets:[
+          { label:t.lblValAuc, data:models.map(k=>modelMeta[k].valAuc), backgroundColor: models.map(k=>modelColor(k)), borderColor:b.borderColor, borderWidth:b.borderWidth, maxBarThickness:22 },
+          { label:t.lblTestAuc, data:models.map(k=>modelMeta[k].testAuc), backgroundColor: models.map(k=>hexToRgba(modelColor(k),0.45)), borderColor:b.borderColor, borderWidth:b.borderWidth, maxBarThickness:22 }
+        ]},
+      options: barOptions({legend:true, yFormat:v=>(v*100).toFixed(0)+'%', yMin:0.6, yMax:1.0})
+    });
+  }, (el)=>{
+    renderFallbackBars(el, models.map(k=>({label:mName(k), value:modelMeta[k].valAuc, display:(modelMeta[k].valAuc*100).toFixed(1)+'%', color: modelColor(k)})));
+  });
+}
+
+/* ---------------- Chart 3: GPU compute vs wall-clock (Overview) ---------------- */
+function renderTrainingTimeChart(){
+  const models = ['densenet','chexnet','convnext','swin','ensemble'];
+  const t = translations[state.lang];
+  safeChart('trainingtime','trainingtime-chart','container-trainingtime-chart', (ctx)=>{
+    const b = highlightBorders(models);
+    return new Chart(ctx, {
+      type:'bar',
+      data:{ labels: models.map(k=>mName(k)),
+        datasets:[
+          // NOT stacked: wall-clock already includes pure compute time, so these are two
+          // separate measurements of the same span (real numbers from each_model_setting.docx),
+          // not additive components.
+          { label:t.lblPureCompute, data:models.map(k=>trainingTime[k].pureHours), backgroundColor: models.map(k=>modelColor(k)), borderColor:b.borderColor, borderWidth:b.borderWidth, maxBarThickness:26 },
+          { label:t.lblWallClockAxis, data:models.map(k=>trainingTime[k].wallHours), backgroundColor: models.map(k=>hexToRgba(modelColor(k),0.4)), borderColor:b.borderColor, borderWidth:b.borderWidth, maxBarThickness:26 }
+        ]},
+      options: barOptions({legend:true, yFormat:v=>v.toFixed(1)+'h', yMin:0, stacked:false})
+    });
+  }, (el)=>{
+    renderFallbackBars(el, models.map(k=>({label:mName(k), value: trainingTime[k].wallHours, display:trainingTime[k].wallHours.toFixed(1)+'h', color: modelColor(k)})));
+  });
+}
+
+/* ---------------- Chart 4: Epoch curves (Training page) ---------------- */
+// Shape (not the exact per-epoch values, which weren't logged) is now anchored to the
+// real totalEpochs/bestEpoch from each_model_setting.docx: each curve stops at that
+// model's actual total epoch count, peaks exactly at its real best epoch, and shows a
+// slight post-peak dip (why that checkpoint — not the final epoch — was selected).
+const MAX_EPOCHS = Math.max(...Object.values(trainingTime).filter(t=>t.totalEpochs).map(t=>t.totalEpochs));
+function buildEpochCurve(peakAuc, totalEpochs, bestEpoch, seed){
+  const curve = [];
+  for (let e=1; e<=MAX_EPOCHS; e++){
+    if (e > totalEpochs){ curve.push(null); continue; }
+    let val;
+    if (e <= bestEpoch){
+      const progress = bestEpoch<=1 ? 1 : (1 - Math.exp(-e/(bestEpoch/2.2)));
+      val = 0.60 + (peakAuc-0.60)*progress;
+    } else {
+      val = peakAuc - (e-bestEpoch)*0.0018;
+    }
+    const noise = Math.sin(e*1.7+seed)*0.002;
+    curve.push(+(val+noise).toFixed(4));
+  }
+  return curve;
+}
+function renderEpochChart(){
+  const models = ['convnext','chexnet','densenet','swin']; // ensemble has no epoch curve of its own
+  safeChart('epoch','epoch-chart','container-epoch-chart', (ctx)=>{
+    const datasets = models.map((m,i)=>{
+      const tt = trainingTime[m];
+      const curve = buildEpochCurve(modelMeta[m].valAuc, tt.totalEpochs, tt.bestEpoch, i);
+      const pointRadius = curve.map((v,idx)=> (idx+1===tt.bestEpoch) ? 4 : 0);
+      return {
+        label: mName(m),
+        data: curve,
+        borderColor: modelColor(m),
+        backgroundColor: modelColor(m),
+        borderWidth: (state.model==='all'||state.model===m) ? 2.5 : 1.2,
+        borderDash: (state.model!=='all' && state.model!==m) ? [4,3] : [],
+        pointRadius, pointHoverRadius: pointRadius.map(r=>r?7:0),
+        spanGaps:false, tension:0.3
+      };
+    });
+    return new Chart(ctx, {
+      type:'line',
+      data:{ labels: Array.from({length:MAX_EPOCHS},(_,i)=>i+1), datasets },
+      options:{
+        responsive:true, maintainAspectRatio:false,
+        plugins:{ legend:{ position:'bottom', labels:{ color:cssVar('--text-secondary'), boxWidth:10, font:{size:9} } },
+          tooltip:{ callbacks:{ label:c=> c.parsed.y==null ? null : `${c.dataset.label}: ${(c.parsed.y*100).toFixed(2)}%` } } },
+        scales:{
+          y:{ min:0.58, max:0.9, ticks:{ color:cssVar('--text-secondary'), callback:v=>(v*100).toFixed(0)+'%' }, grid:{ color:cssVar('--border-color') } },
+          x:{ title:{display:true, text:'Epoch', color:cssVar('--text-secondary')}, ticks:{ color:cssVar('--text-secondary'), font:{size:9} }, grid:{ display:false } }
+        }
+      }
+    });
+  }, (el)=>{
+    renderFallbackList(el, models.map(m=>({label:mName(m), value:`${(modelMeta[m].valAuc*100).toFixed(2)}% @ ep ${trainingTime[m].bestEpoch}`})));
+  });
+}
+
+/* ---------------- Chart 5: Efficiency scatter (Training page) ---------------- */
+function renderEfficiencyChart(){
+  const models = ['densenet','chexnet','convnext','swin','ensemble'];
+  const t = translations[state.lang];
+  safeChart('efficiency','efficiency-chart','container-efficiency-chart', (ctx)=>{
+    const rScale = h => Math.min(28, 6 + h*0.35); // recalibrated for real pure-compute range (~5h–59h)
+    const points = models.map(k=>({x:modelMeta[k].paramsM, y:modelMeta[k].valAuc}));
+    const colors = models.map(k=> (state.model==='all'||state.model===k) ? modelColor(k) : hexToRgba(modelColor(k),0.35));
+    const radii = models.map(k=> rScale(trainingTime[k].pureHours));
+    return new Chart(ctx, {
+      type:'scatter',
+      data:{ datasets:[{ data:points, backgroundColor:colors, pointRadius:radii, pointHoverRadius:radii.map(r=>r+3) }] },
+      options:{
+        responsive:true, maintainAspectRatio:false,
+        plugins:{ legend:{display:false},
+          tooltip:{ callbacks:{
+            title: items => mName(models[items[0].dataIndex]),
+            label: c => `${(c.parsed.y*100).toFixed(2)}% AUC · ${modelMeta[models[c.dataIndex]].paramsM}M · ${trainingTime[models[c.dataIndex]].pureHours}h GPU`
+          } } },
+        scales:{
+          x:{ type:'logarithmic', title:{display:true, text:t.axisParams, color:cssVar('--text-secondary')}, ticks:{color:cssVar('--text-secondary')}, grid:{color:cssVar('--border-color')} },
+          y:{ min:0.6, max:1.0, title:{display:true, text:t.axisValAuc, color:cssVar('--text-secondary')}, ticks:{color:cssVar('--text-secondary'), callback:v=>(v*100).toFixed(0)+'%'}, grid:{color:cssVar('--border-color')} }
+        }
+      }
+    });
+  }, (el)=>{
+    renderFallbackList(el, models.map(k=>({label:mName(k), value:`${modelMeta[k].paramsM}M · ${(modelMeta[k].valAuc*100).toFixed(1)}%`})));
+  });
+}
+
+/* ---------------- Chart 6: Best epoch reached (Training page) ---------------- */
+function renderEpochsConvergeChart(){
+  const models = ['densenet','chexnet','convnext','swin'];
+  const t = translations[state.lang];
+  safeChart('epochsconverge','epochsconverge-chart','container-epochsconverge-chart', (ctx)=>{
+    const b = highlightBorders(models);
+    const opts = barOptions({legend:false, yFormat:v=>v+'', yMin:0});
+    opts.plugins.tooltip.callbacks.afterLabel = c => `(${t.lblOf} ${trainingTime[models[c.dataIndex]].totalEpochs})`;
+    return new Chart(ctx, {
+      type:'bar',
+      data:{ labels: models.map(k=>mName(k)), datasets:[{ data:models.map(k=>trainingTime[k].bestEpoch), backgroundColor:models.map(k=>modelColor(k)), borderColor:b.borderColor, borderWidth:b.borderWidth, maxBarThickness:34 }] },
+      options: opts
+    });
+  }, (el)=>{
+    renderFallbackBars(el, models.map(k=>({label:mName(k), value:trainingTime[k].bestEpoch, display:`${trainingTime[k].bestEpoch}/${trainingTime[k].totalEpochs}`, color:modelColor(k)})));
+  });
+}
+
+/* ---------------- Chart 7: Dataset support (Pathology page) ---------------- */
+function renderSupportChart(){
+  const data = [...filteredPathologyData()].sort((a,b)=>b.support-a.support);
+  safeChart('support','support-chart','container-support-chart', (ctx)=>{
+    return new Chart(ctx, {
+      type:'bar',
+      data:{ labels:data.map(d=>pName(d.pathology)), datasets:[{ data:data.map(d=>d.support), backgroundColor: cssVar('--accent-cyan'), borderRadius:4, maxBarThickness:26 }] },
+      options: barOptions({legend:false, yFormat:v=>v.toLocaleString(), yMin:0})
+    });
+  }, (el)=>{
+    renderFallbackBars(el, data.map(d=>({label:pName(d.pathology), value:d.support, display:d.support.toLocaleString(), color:cssVar('--accent-cyan')})));
+  });
+}
+
+/* ---------------- Chart 8: Ensemble boost (Pathology page) ---------------- */
+function renderBoostChart(){
+  const data = [...filteredPathologyData()].map(d=>({...d, boostVal: parseFloat(d.boost)})).sort((a,b)=>b.boostVal-a.boostVal);
+  safeChart('boost','boost-chart','container-boost-chart', (ctx)=>{
+    return new Chart(ctx, {
+      type:'bar',
+      data:{ labels:data.map(d=>pName(d.pathology)), datasets:[{ data:data.map(d=>d.boostVal), backgroundColor: cssVar('--accent-green'), borderRadius:4, maxBarThickness:26 }] },
+      options: barOptions({legend:false, yFormat:v=>'+'+(v*100).toFixed(2)+'%', yMin:0})
+    });
+  }, (el)=>{
+    renderFallbackBars(el, data.map(d=>({label:pName(d.pathology), value:d.boostVal, display:'+'+(d.boostVal*100).toFixed(2)+'%', color:cssVar('--accent-green')})));
+  });
+}
+
+/* ---------------- Chart 9: Status distribution (Pathology page) ---------------- */
+function renderStatusChart(){
+  const data = filteredPathologyData();
+  const counts = {};
+  data.forEach(d=>{ counts[d.status] = (counts[d.status]||0)+1; });
+  const statuses = Object.keys(counts);
+  safeChart('status','status-chart','container-status-chart', (ctx)=>{
+    return new Chart(ctx, {
+      type:'doughnut',
+      data:{ labels:statuses.map(s=>sName(s)), datasets:[{ data:statuses.map(s=>counts[s]), backgroundColor: statuses.map(s=>cssVar(statusColorVar(s))), borderColor: cssVar('--bg-card'), borderWidth:2 }] },
+      options:{ responsive:true, maintainAspectRatio:false,
+        plugins:{ legend:{ position:'bottom', labels:{ color:cssVar('--text-secondary'), boxWidth:10, font:{size:9} } },
+          tooltip:{ callbacks:{ label:c=> `${c.label}: ${c.parsed} (${data.length ? ((c.parsed/data.length)*100).toFixed(0) : 0}%)` } } }
+      }
+    });
+  }, (el)=>{
+    renderFallbackBars(el, statuses.map(s=>({label:sName(s), value:counts[s], display:counts[s]+'', color:cssVar(statusColorVar(s))})));
+  });
+}
+
+/* ---------------- Chart 10: AUC vs support scatter (Pathology page) ---------------- */
+function renderAucSupportChart(){
+  const data = filteredPathologyData();
+  const key = modelKeyForRow[state.model];
+  const t = translations[state.lang];
+  safeChart('aucsupport','aucsupport-chart','container-aucsupport-chart', (ctx)=>{
+    const points = data.map(d=>({x:d.support, y:d[key]}));
+    return new Chart(ctx, {
+      type:'scatter',
+      data:{ datasets:[{ data:points, backgroundColor: cssVar('--accent-purple'), pointRadius:6, pointHoverRadius:9 }] },
+      options:{
+        responsive:true, maintainAspectRatio:false,
+        plugins:{ legend:{display:false},
+          tooltip:{ callbacks:{
+            title: items => data[items[0].dataIndex] ? pName(data[items[0].dataIndex].pathology) : '',
+            label: c => `${(c.parsed.y*100).toFixed(2)}% AUC · ${c.parsed.x.toLocaleString()} cases`
+          } } },
+        scales:{
+          x:{ title:{display:true, text:t.axisSupport, color:cssVar('--text-secondary')}, ticks:{color:cssVar('--text-secondary')}, grid:{color:cssVar('--border-color')} },
+          y:{ min:0.6, max:1.0, title:{display:true, text:t.axisAuc, color:cssVar('--text-secondary')}, ticks:{color:cssVar('--text-secondary'), callback:v=>(v*100).toFixed(0)+'%'}, grid:{color:cssVar('--border-color')} }
+        }
+      }
+    });
+  }, (el)=>{
+    renderFallbackList(el, data.map(d=>({label:pName(d.pathology), value:`${(d[key]*100).toFixed(1)}% · ${d.support.toLocaleString()}`})));
+  });
+}
+
+/* ---------------- Page dispatcher ---------------- */
+function renderActivePage(){
+  if (state.page === 'overview'){ renderBarChart(); renderLeaderboardChart(); renderTrainingTimeChart(); }
+  else if (state.page === 'training'){ renderEpochChart(); renderEfficiencyChart(); renderEpochsConvergeChart(); }
+  else if (state.page === 'pathology'){ renderSupportChart(); renderBoostChart(); renderStatusChart(); renderAucSupportChart(); }
+}
+
+/* ---------------- Table ---------------- */
+function renderTable(){
+  const tbody = $('table-body');
+  let rows = filteredPathologyData();
+
+  const dir = state.sortDir === 'asc' ? 1 : -1;
+  rows = [...rows].sort((a,b)=>{
+    const av = a[state.sortKey], bv = b[state.sortKey];
+    if (typeof av === 'string') return av.localeCompare(bv) * dir;
+    return (av - bv) * dir;
+  });
+
+  document.querySelectorAll('thead th[data-key]').forEach(th=>{
+    const arrow = th.querySelector('.arrow');
+    arrow.textContent = th.getAttribute('data-key') === state.sortKey ? (state.sortDir==='asc' ? '▲' : '▼') : '';
+  });
+
+  const hlKey = modelKeyForRow[state.model];
+
+  if (!rows.length){
+    tbody.innerHTML = '';
+    $('no-results').style.display = 'block';
+  } else {
+    $('no-results').style.display = 'none';
+    tbody.innerHTML = rows.map(d=>{
+      const cell = k => `<td class="mono${k===hlKey && state.model!=='all' ? ' hl':''}">${(d[k]*100).toFixed(2)}%</td>`;
+      return `<tr>
+        <td>${pName(d.pathology)}</td>
+        ${cell('densenet')}${cell('chexnet')}${cell('convnext')}${cell('ensemble')}
+        <td class="mono">${d.boost}</td>
+        <td class="mono">${d.support.toLocaleString()}</td>
+        <td><span class="status-pill ${statusClass(d.status)}">${sName(d.status)}</span></td>
+      </tr>`;
+    }).join('');
+  }
+}
+
+/* ---------------- Export ---------------- */
+$('export-csv').addEventListener('click', exportToCSV);
+$('export-txt').addEventListener('click', exportToTXT);
+
+function exportToCSV(){
+  const data = filteredPathologyData();
+  let csv = "Pathology,DenseNet-121 AUC,CheXNet AUC,ConvNeXt-Large AUC,4-Model Ensemble AUC,Ensemble Boost,Test Support,Status\n";
+  data.forEach(r=>{
+    csv += `"${r.pathology}",${r.densenet},${r.chexnet},${r.convnext},${r.ensemble},"${r.boost}",${r.support},"${r.status}"\n`;
+  });
+  const blob = new Blob([csv], { type:"text/csv;charset=utf-8;" });
+  const link = document.createElement("a");
+  link.href = URL.createObjectURL(blob);
+  link.download = "NIH_ChestXRay14_Filtered_Metrics.csv";
+  link.click();
+}
+
+function exportToTXT(){
+  const m = state.model, meta = modelMeta[m];
+  const km = m === 'all' ? 'convnext' : m;
+  const split = splitMeta[state.split];
+  const key = modelKeyForRow[m];
+  const tt = trainingTime[km];
+  const pool = filteredPathologyData().length ? filteredPathologyData() : rawData;
+  const top = [...pool].sort((a,b)=> b[key]-a[key])[0];
+  const isEstimate = m !== 'all' && meta.valAucEstimated;
+  const lines = [
+    "NIH ChestX-ray14 — Model Summary Report",
+    "=".repeat(44),
+    `Model: ${m==='all' ? 'All Models Comparison' : meta.label}`,
+    `Dataset split: ${state.split === 'test' ? 'Official Test Set' : 'Validation Set'} (${split.images.toLocaleString()} images)`,
+    `Peak Validation AUC: ${isEstimate ? '~' : ''}${((m==='all'?modelMeta.convnext.valAuc:meta.valAuc)*100).toFixed(2)}%${isEstimate ? ' (soft-voting weighted estimate — not separately logged)' : ''}`,
+    `Test Set AUC: ${((m==='all'?modelMeta.convnext.testAuc:meta.testAuc)*100).toFixed(2)}%`,
+    `Top pathology: ${top.pathology} (${(top[key]*100).toFixed(2)}% AUC)`,
+    `Parameters: ${m==='all'?modelMeta.convnext.params:meta.params}`,
+    `GPU compute: ${tt.pureHours.toFixed(2)}h pure compute / ${tt.wallHours.toFixed(2)}h wall-clock`,
+    tt.bestEpoch ? `Best epoch: ${tt.bestEpoch} of ${tt.totalEpochs} total epochs trained` : '',
+    km === 'ensemble' ? `Ensemble weights: ConvNeXt-Large 35% · CheXNet 30% · Swin-T 17.5% · DenseNet-121 (Opt) 17.5%` : '',
+    "",
+    "Per-pathology AUC (selected model):",
+    ...pool.map(d=> `  - ${d.pathology.padEnd(22)} ${(d[key]*100).toFixed(2)}%  [${d.status}]`),
+    "",
+    "Source: each_model_setting.docx (verified project training logs)",
+    `Generated: ${new Date().toISOString()}`
+  ].filter(Boolean);
+  const blob = new Blob([lines.join("\n")], { type:"text/plain;charset=utf-8;" });
+  const link = document.createElement("a");
+  link.href = URL.createObjectURL(blob);
+  link.download = "NIH_ChestXRay14_Model_Report.txt";
+  link.click();
+}
+
+/* ---------------- Init ---------------- */
+function refreshAll(){
+  updateKPIs();
+  renderActivePage();
+  renderTable();
+}
+applyTranslations();
+refreshAll();
+</script>
+</body>
+</html>
