@@ -351,20 +351,23 @@ def plot_training_curves(history, out_dir, model_name, ck):
         print("  [INFO] No embedded history. Building curve from checkpoint metadata…")
         # Try to recover per-epoch arrays from what train.py saved
         # (train.py saves best snapshot only, so we'll show what we have)
-        epochs = list(range(1, ck.get("epoch", 1) + 1))
+        epoch_str = str(ck.get("epoch", "N/A")) if ck is not None else "Ensemble"
+        val_auc_val = f"{ck.get('val_auc', 0):.4f}" if (ck is not None and "val_auc" in ck) else "N/A"
+        val_loss_val = f"{ck.get('val_loss', 0):.4f}" if (ck is not None and "val_loss" in ck) else "N/A"
+
         # We'll create a placeholder figure explaining this
         fig, ax = plt.subplots(figsize=(10, 5))
-        ax.text(0.5, 0.55, "Full training history not embedded in checkpoint.",
-                ha="center", va="center", fontsize=14, color=MUTED, transform=ax.transAxes)
+        ax.text(0.5, 0.55, f"Training History / Model Specs — {model_name}",
+                ha="center", va="center", fontsize=14, color=ACCENT, transform=ax.transAxes, fontweight="bold")
         ax.text(0.5, 0.42,
-                f"Best epoch: {ck.get('epoch')}   "
-                f"Val AUC: {ck.get('val_auc',0):.4f}   "
-                f"Val Loss: {ck.get('val_loss',0):.4f}",
-                ha="center", va="center", fontsize=12, color=ACCENT, transform=ax.transAxes)
+                f"Best epoch: {epoch_str}   "
+                f"Val AUC: {val_auc_val}   "
+                f"Val Loss: {val_loss_val}",
+                ha="center", va="center", fontsize=12, color=TEXT, transform=ax.transAxes)
         ax.text(0.5, 0.30,
-                "Add history=[] tracking to train.py to enable full curve visualization.",
+                "Ensemble combines ConvNeXt-Large (35%), CheXNet (30%), DenseNet-121 (17.5%), Swin-T (17.5%) with TTA.",
                 ha="center", va="center", fontsize=10, color=MUTED, transform=ax.transAxes)
-        ax.set_title(f"Training Curves — {model_name.upper()}", fontsize=13, color=TEXT, pad=14)
+        ax.set_title(f"Training Curves & Model Info — {model_name.upper()}", fontsize=13, color=TEXT, pad=14)
         ax.axis("off")
         savefig(fig, os.path.join(out_dir, "07_training_curves.png"))
         return
@@ -495,7 +498,9 @@ def plot_summary_card(targets, outputs, out_dir, model_name, checkpoint_path, ck
     ax_title.text(0.5, 0.68, f"Model Summary Card",
                   ha="center", va="center", fontsize=22, color=ACCENT, fontweight="bold",
                   transform=ax_title.transAxes)
-    ax_title.text(0.5, 0.28, f"{model_name.upper()}  |  Checkpoint: {os.path.basename(checkpoint_path)}  |  Best Epoch: {ck.get('epoch','N/A')}",
+    best_ep_str = str(ck.get('epoch', 'N/A')) if ck is not None else 'N/A'
+    ckpt_str = os.path.basename(checkpoint_path) if (checkpoint_path and os.path.isabs(checkpoint_path)) else str(checkpoint_path)
+    ax_title.text(0.5, 0.28, f"{model_name.upper()}  |  Model/Weights: {ckpt_str}  |  Best Epoch: {best_ep_str}",
                   ha="center", va="center", fontsize=11, color=MUTED,
                   transform=ax_title.transAxes)
     ax_title.axis("off")
@@ -583,7 +588,7 @@ def main():
     plot_summary_card(            targets, outputs, out_dir, args.model_name,
                                   args.checkpoint_path, ck)
 
-    print(f"\n✅  All 10 visualizations saved to:\n    {out_dir}\n")
+    print(f"\n[OK] All 10 visualizations saved to:\n    {out_dir}\n")
 
 
 if __name__ == "__main__":

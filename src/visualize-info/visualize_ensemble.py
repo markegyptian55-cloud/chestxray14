@@ -72,7 +72,7 @@ def run_ensemble_inference(batch_size, num_workers, csv_path, img_dir, train_val
 
     weights = np.array(weights) / np.sum(weights)
 
-    print("[INFO] Running 4-Model Ensemble inference on test set...")
+    print("[INFO] Running 4-Model Ensemble inference on test set (FP16 Autocast accelerated)...")
     all_t, all_p = [], []
     with torch.no_grad():
         for i, (imgs, tgts) in enumerate(test_loader):
@@ -82,17 +82,18 @@ def run_ensemble_inference(batch_size, num_workers, csv_path, img_dir, train_val
             imgs_flipped = torch.flip(imgs, dims=[3])
             
             model_probs = []
-            for model in loaded_models:
-                out_orig = torch.sigmoid(model(imgs))
-                out_flip = torch.sigmoid(model(imgs_flipped))
-                avg_prob = (out_orig + out_flip) / 2.0
-                model_probs.append(avg_prob)
+            with torch.cuda.amp.autocast():
+                for model in loaded_models:
+                    out_orig = torch.sigmoid(model(imgs))
+                    out_flip = torch.sigmoid(model(imgs_flipped))
+                    avg_prob = (out_orig + out_flip) / 2.0
+                    model_probs.append(avg_prob)
 
             # Weighted soft voting on GPU
             ensemble_prob = sum(w * p for w, p in zip(weights, model_probs))
             
             all_t.append(tgts.numpy())
-            all_p.append(ensemble_prob.cpu().numpy())
+            all_p.append(ensemble_prob.float().cpu().numpy())
 
             if (i + 1) % 100 == 0 or (i + 1) == len(test_loader):
                 print(f"  Processed {i+1}/{len(test_loader)} batches")

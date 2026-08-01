@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>NIH ChestX-ray14 AI Dashboard</title>
+<title>SmartCXR — AI Chest X-Ray Dashboard</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Cairo:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.0/chart.umd.min.js"></script>
@@ -168,10 +168,10 @@ footer{margin-top:32px; text-align:center; color:var(--text-muted); font-size:.7
   <header class="hdr">
     <div>
       <div class="hdr-title">
-        <h1 data-i18n="title">NIH ChestX-ray14 AI Dashboard</h1>
+        <h1 data-i18n="title">SmartCXR</h1>
         <span class="badge" data-i18n="badge">SOTA 85.24% AUC</span>
       </div>
-      <div class="subtitle" data-i18n="subtitle">Multi-Label Classification • 14 Pathologies • Deep Learning Benchmark</div>
+      <div class="subtitle" data-i18n="subtitle">NIH ChestX-ray14 Dataset • Multi-Label Classification • 14 Pathologies</div>
     </div>
     <div class="hdr-actions">
       <button class="btn" id="theme-toggle" data-i18n="themeBtn">Light Mode</button>
@@ -354,7 +354,7 @@ footer{margin-top:32px; text-align:center; color:var(--text-muted); font-size:.7
     <div class="no-results" id="no-results" style="display:none;" data-i18n="noResults">No pathologies match your search.</div>
   </section>
 
-  <footer data-i18n="footer">NIH ChestX-ray14 Multi-Label Deep Learning Benchmark — Static offline dashboard.</footer>
+  <footer data-i18n="footer">SmartCXR — Multi-Label Deep Learning Benchmark on the NIH ChestX-ray14 Dataset · Static offline dashboard.</footer>
 </div>
 
 <script>
@@ -443,9 +443,9 @@ function mName(k){ return (modelLabels[state.lang] && modelLabels[state.lang][k]
 /* ---------------- i18n ---------------- */
 const translations = {
   en: {
-    title:"NIH ChestX-ray14 AI Dashboard",
+    title:"SmartCXR",
     badge:"SOTA 85.24% AUC",
-    subtitle:"Multi-Label Classification • 14 Pathologies • Deep Learning Benchmark",
+    subtitle:"NIH ChestX-ray14 Dataset • Multi-Label Classification • 14 Pathologies",
     langBtn:"العربية",
     themeBtn:"Light Mode",
     themeBtnDark:"Dark Mode",
@@ -497,15 +497,15 @@ const translations = {
     thPathology:"Pathology", thDenseNet:"DenseNet-121", thCheXNet:"CheXNet", thConvNeXt:"ConvNeXt-L",
     thEnsemble:"Ensemble", thBoost:"Boost", thSupport:"Support", thStatus:"Status",
     noResults:"No pathologies match your search.",
-    footer:"NIH ChestX-ray14 Multi-Label Deep Learning Benchmark — Static offline dashboard.",
+    footer:"SmartCXR — Multi-Label Deep Learning Benchmark on the NIH ChestX-ray14 Dataset · Static offline dashboard.",
     rankLabel:"Rank #{r} of 5 architectures",
     testSub:"{n} test scans",
     valSub:"{n} validation scans"
   },
   ar: {
-    title:"لوحة تحكم ذكاء الأشعة NIH ChestX-ray14",
+    title:"SmartCXR",
     badge:"المعيار 85.24% AUC",
-    subtitle:"التصنيف متعدد الأمراض • 14 مرضاً صدرياً • منصة أداء التعلم العميق",
+    subtitle:"بيانات NIH ChestX-ray14 • التصنيف متعدد الأمراض • 14 مرضاً صدرياً",
     langBtn:"English",
     themeBtn:"الوضع المظلم",
     themeBtnDark:"الوضع الفاتح",
@@ -557,7 +557,7 @@ const translations = {
     thPathology:"المرض", thDenseNet:"دنسنت-121", thCheXNet:"شيكسنت", thConvNeXt:"كونفنيكست-L",
     thEnsemble:"المجمع", thBoost:"التحسّن", thSupport:"عدد الحالات", thStatus:"الحالة",
     noResults:"لا توجد أمراض مطابقة لبحثك.",
-    footer:"معيار NIH ChestX-ray14 للتعلم العميق متعدد الأمراض — لوحة تحكم ثابتة تعمل دون اتصال.",
+    footer:"SmartCXR — معيار التعلم العميق متعدد الأمراض على بيانات NIH ChestX-ray14 · لوحة تحكم ثابتة تعمل دون اتصال.",
     rankLabel:"الترتيب #{r} من 5 نماذج",
     testSub:"{n} صورة اختبار",
     valSub:"{n} صورة تحقق"
@@ -1034,7 +1034,7 @@ function exportToCSV(){
   const blob = new Blob([csv], { type:"text/csv;charset=utf-8;" });
   const link = document.createElement("a");
   link.href = URL.createObjectURL(blob);
-  link.download = "NIH_ChestXRay14_Filtered_Metrics.csv";
+  link.download = "SmartCXR_Filtered_Metrics.csv";
   link.click();
 }
 
@@ -1048,7 +1048,7 @@ function exportToTXT(){
   const top = [...pool].sort((a,b)=> b[key]-a[key])[0];
   const isEstimate = m !== 'all' && meta.valAucEstimated;
   const lines = [
-    "NIH ChestX-ray14 — Model Summary Report",
+    "SmartCXR — Model Summary Report",
     "=".repeat(44),
     `Model: ${m==='all' ? 'All Models Comparison' : meta.label}`,
     `Dataset split: ${state.split === 'test' ? 'Official Test Set' : 'Validation Set'} (${split.images.toLocaleString()} images)`,
@@ -1069,7 +1069,7 @@ function exportToTXT(){
   const blob = new Blob([lines.join("\n")], { type:"text/plain;charset=utf-8;" });
   const link = document.createElement("a");
   link.href = URL.createObjectURL(blob);
-  link.download = "NIH_ChestXRay14_Model_Report.txt";
+  link.download = "SmartCXR_Model_Report.txt";
   link.click();
 }
 
